@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style>
+      html, body, #map-canvas {
+        height: 100%;
+        margin: 0px;
+        padding: 0px
+      }
+      #panel {
+        position: absolute;
+        top: 5px; 
+        margin: auto;
+        z-index: 5;
+        background-color: #fff;
+        padding: 5px;
+        border: 1px solid #999;
+      }
+    </style>
+    <script type="text/javascript"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBj-LI45_3msjM7hqaAUl1hEj0J8fgidw&sensor=false">
+    </script>
+    <script type="text/javascript">
+      function initialize() {
+        var mapOptions = {
+          center: new google.maps.LatLng(45, -93),
+          zoom: 13,
+          mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+        var map = new google.maps.Map(document.getElementById("map-canvas"),
+            mapOptions);
+      }
+      google.maps.event.addDomListener(window, 'load', initialize);
+    </script>
+  </head>
+  <body>
+  	<div id="panel">
+    <form action="demo_form.asp">
+  		Start : <input type="text" name="origin"> 
+        End: <input type="text" name="destination"> 
+        <b>With Doing</b>
+        <select id="enroutetask" onChange="">
+        	<option value="grocery">Grocery</option>
+      		<option value="fastfood">Fast Food</option>
+      		<option value="coffee">Coffee</option>
+		</select>
+        <b>Enroute</b>
+        <input type="submit" value="Submit">
+	</form>
+    </div>  
+  	<div id = "map-canvas"/>		
+  </body>
+</html>
