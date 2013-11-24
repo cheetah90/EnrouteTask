@@ -23,32 +23,54 @@
       src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBj-LI45_3msjM7hqaAUl1hEj0J8fgidw&sensor=false">
     </script>
     <script type="text/javascript">
-      function initialize() {
-        var mapOptions = {
-          center: new google.maps.LatLng(45, -93),
-          zoom: 13,
-          mapTypeId: google.maps.MapTypeId.ROADMAP
-        };
-        var map = new google.maps.Map(document.getElementById("map-canvas"),
-            mapOptions);
-      }
+    	var directionsDisplay;
+		var directionsService = new google.maps.DirectionsService(); 
+		var map;  
+		
+		function initialize() {
+		directionsDisplay = new google.maps.DirectionsRenderer();
+		var mapOptions = {
+		  center: new google.maps.LatLng(45, -93),
+		  zoom: 13,
+		  mapTypeId: google.maps.MapTypeId.ROADMAP
+		}
+		var map = new google.maps.Map(document.getElementById("map-canvas"),mapOptions);
+		
+		directionsDisplay.setMap(map);		
+	 	}
+		
+		function calcRoute(){
+			var start = document.getElementById("origin").value;
+			var dest = document.getElementById("destination").value;
+			
+			var directonRequest={
+				origin: start,
+			  	destination: dest,
+			  	travelMode: google.maps.TravelMode.DRIVING,
+			  	unitSystem: google.maps.UnitSystem.METRIC,
+				}
+			directionsService.route(directonRequest, function(directionResult, status){
+				if (status==google.maps.DirectionsStatus.OK){
+					directionsDisplay.setDirections(directionResult);
+					}				
+				});		
+			}
+		
       google.maps.event.addDomListener(window, 'load', initialize);
     </script>
   </head>
   <body>
   	<div id="panel">
-    <form action="demo_form.asp">
-  		Start : <input type="text" name="origin"> 
-        End: <input type="text" name="destination"> 
+  		Start: <input id="origin" type="text"> 
+        End: <input id="destination"type="text"> 
         <b>With Doing</b>
-        <select id="enroutetask" onChange="">
+        <select id="enroutetask">
         	<option value="grocery">Grocery</option>
       		<option value="fastfood">Fast Food</option>
       		<option value="coffee">Coffee</option>
 		</select>
         <b>Enroute</b>
-        <input type="submit" value="Submit">
-	</form>
+        <input type="button" value="Submit" onClick="calcRoute();">
     </div>  
   	<div id = "map-canvas"/>		
   </body>
