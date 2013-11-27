@@ -18,42 +18,178 @@
         padding: 5px;
         border: 1px solid #999;
       }
+	  
+	  #directions-panel {
+        height: 100%;
+        float: right;
+        width: 350px;
+        overflow: auto;
+      }
+
+      #map-canvas {
+        margin-right: 350px;
+      }
+	  
+	  @media print {
+        #map-canvas {
+          height: 500px;
+          margin: 0;
+        }
+
+        #directions-panel {
+          float: none;
+          width: auto;
+        }
+      }
+	  
     </style>
-    <script type="text/javascript"
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBj-LI45_3msjM7hqaAUl1hEj0J8fgidw&sensor=false">
-    </script>
-    <script type="text/javascript">
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBj-LI45_3msjM7hqaAUl1hEj0J8fgidw&libraries=places&sensor=true"></script>
+	<script type="text/javascript">
     	var directionsDisplay;
 		var directionsService = new google.maps.DirectionsService(); 
 		var map;  
+		var tp_nearestEstablishmentObject = new Object();
+		var nearestEstablishmentObject = new Object();
+		var	detourTime=9999;
+		var start;
+		var dest;
+		var placesService;
+		var marker;
+		var placeInfoWindow;
+		
 		
 		function initialize() {
-		directionsDisplay = new google.maps.DirectionsRenderer();
-		var mapOptions = {
-		  center: new google.maps.LatLng(45, -93),
-		  zoom: 13,
-		  mapTypeId: google.maps.MapTypeId.ROADMAP
-		}
-		var map = new google.maps.Map(document.getElementById("map-canvas"),mapOptions);
-		
-		directionsDisplay.setMap(map);		
+			directionsDisplay = new google.maps.DirectionsRenderer();
+			var mapOptions = {
+			  center: new google.maps.LatLng(45, -93),
+			  zoom: 13,
+			  mapTypeId: google.maps.MapTypeId.ROADMAP
+			}
+			map = new google.maps.Map(document.getElementById("map-canvas"),mapOptions);
+			
+			directionsDisplay.setMap(map);
+			directionsDisplay.setPanel(document.getElementById('directions-panel'));
+			placesService = new google.maps.places.PlacesService(map);
+			placeInfoWindow = new google.maps.InfoWindow();		
 	 	}
 		
 		function calcRoute(){
-			var start = document.getElementById("origin").value;
-			var dest = document.getElementById("destination").value;
+			if(marker!=null)
+			{
+				marker.setMap(null);
+				marker=null;
+			}
 			
-			var directonRequest={
+			start = document.getElementById("origin").value;
+			dest = document.getElementById("destination").value;
+			
+			var firstdirectonRequest={
 				origin: start,
 			  	destination: dest,
 			  	travelMode: google.maps.TravelMode.DRIVING,
 			  	unitSystem: google.maps.UnitSystem.METRIC,
 				}
-			directionsService.route(directonRequest, function(directionResult, status){
+			directionsService.route(firstdirectonRequest, function(directionsResult, status){
 				if (status==google.maps.DirectionsStatus.OK){
-					directionsDisplay.setDirections(directionResult);
-					}				
-				});		
+					IterateWayPoint(directionsResult);
+				}				
+			});
+			
+			createMarker(nearestEstablishmentObject);
+			
+			var finalDirectonRequest={
+				origin: start,
+				destination: dest,
+				travelMode: google.maps.TravelMode.DRIVING,
+				unitSystem: google.maps.UnitSystem.METRIC,
+				waypoints: [
+				{
+					location: nearestEstablishmentObject.geometry.location,
+					stopover: false,
+				}]
+			}
+		
+			directionsService.route(finalDirectonRequest, function(finalDirectionsResult, status){
+				if (status==google.maps.DirectionsStatus.OK){
+					directionsDisplay.setDirections(finalDirectionsResult);
+				}				
+			});		
+		}
+		
+		function createMarker(place) {
+		  marker = new google.maps.Marker({
+			map: map,
+			position: place.geometry.location
+		  });
+		
+		  google.maps.event.addListener(marker, 'click', function() {
+			placeInfoWindow.setContent(place.name);
+			placeInfoWindow.open(map, this);
+		  });
+		}
+		
+		
+		function IterateWayPoint(directionsResult){
+			var establishmentType= document.getElementById("select_enroutetask").value;
+			var searchCoord;
+			
+			for(var routeIter=0; routeIter<directionsResult.routes.length; routeIter++){
+				for (var legIter=0; legIter<directionsResult.routes[routeIter].legs.length; legIter++){
+					searchCoord=directionsResult.routes[routeIter].legs[legIter].start_location; 	//Need to be improved by embedded it in for loop
+					var placesSearchRequest = {
+						location: searchCoord,
+						types: [establishmentType],
+						rankBy: google.maps.places.RankBy.DISTANCE,
+					  };			
+					searchNearestEstablishment(placesSearchRequest);
+					  
+					for (var stepIter=0; stepIter<directionsResult.routes[routeIter].legs[legIter].length; stepIter++){
+						searchCoord=directionsResult.routes[routeIter].legs[legIter].step[stepIter].end_location;
+						var placesSearchRequest = {
+							location: searchCoord,
+							types: [establishmentType],
+							rankBy: google.maps.places.RankBy.DISTANCE,
+						};			
+						searchNearestEstablishment(placesSearchRequest);
+						}					
+					}
+				}		
+		}
+		
+		function searchNearestEstablishment(placesSearchRequest){
+			placesService.nearbySearch(placesSearchRequest, function(placesResults, status){
+				if (status == google.maps.places.PlacesServiceStatus.OK)
+				{
+					updatePlaceResultObject(tp_nearestEstablishmentObject,placesResults[0]);
+					var compareDirectonRequest=
+					{
+						origin: placesSearchRequest.location,
+						destination: tp_nearestEstablishmentObject.geometry.location,
+						travelMode: google.maps.TravelMode.DRIVING,
+						unitSystem: google.maps.UnitSystem.METRIC,
+					}
+					
+					directionsService.route(compareDirectonRequest, function(compareDirectionsResult, status)
+					{
+						if (status==google.maps.DirectionsStatus.OK)
+						{
+							if(compareDirectionsResult.routes[0].legs[0].duration.value<detourTime)
+							{
+								detourTime=compareDirectionsResult.routes[0].legs[0].duration.value;
+								updatePlaceResultObject(nearestEstablishmentObject,tp_nearestEstablishmentObject);
+							}
+						}
+					});
+					
+				}
+			});
+		};
+		
+		function updatePlaceResultObject(tobeupdated,update){
+			tobeupdated.geometry= update.geometry;
+			tobeupdated.icon=update.icon;
+			tobeupdated.name=update.name;
+			tobeupdated.vicinity=update.vicinity;
 			}
 		
       google.maps.event.addDomListener(window, 'load', initialize);
@@ -64,14 +200,15 @@
   		Start: <input id="origin" type="text"> 
         End: <input id="destination"type="text"> 
         <b>With Doing</b>
-        <select id="enroutetask">
-        	<option value="grocery">Grocery</option>
-      		<option value="fastfood">Fast Food</option>
-      		<option value="coffee">Coffee</option>
+        <select id="select_enroutetask">
+        	<option value="grocery_or_supermarket">Grocery</option>
+      		<option value="restaurant">Restaurant</option>
+      		<option value="cafe">Coffee</option>
 		</select>
         <b>Enroute</b>
         <input type="button" value="Submit" onClick="calcRoute();">
-    </div>  
+    </div>
+    <div id="directions-panel"></div>  
   	<div id = "map-canvas"/>		
   </body>
 </html>
