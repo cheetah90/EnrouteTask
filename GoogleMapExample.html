@@ -89,29 +89,30 @@
 			  	travelMode: google.maps.TravelMode.DRIVING,
 			  	unitSystem: google.maps.UnitSystem.METRIC,
 				}
+				
 			directionsService.route(firstdirectonRequest, function(directionsResult, status){
 				if (status==google.maps.DirectionsStatus.OK){
 					IterateWayPoint(directionsResult);
-				}				
-			});
+					
+					createMarker(nearestEstablishmentObject);
 			
-			createMarker(nearestEstablishmentObject);
-			
-			var finalDirectonRequest={
-				origin: start,
-				destination: dest,
-				travelMode: google.maps.TravelMode.DRIVING,
-				unitSystem: google.maps.UnitSystem.METRIC,
-				waypoints: [
-				{
-					location: nearestEstablishmentObject.geometry.location,
-					stopover: false,
-				}]
-			}
-		
-			directionsService.route(finalDirectonRequest, function(finalDirectionsResult, status){
-				if (status==google.maps.DirectionsStatus.OK){
-					directionsDisplay.setDirections(finalDirectionsResult);
+					var finalDirectonRequest={
+						origin: start,
+						destination: dest,
+						travelMode: google.maps.TravelMode.DRIVING,
+						unitSystem: google.maps.UnitSystem.METRIC,
+						waypoints: [
+						{
+							location: nearestEstablishmentObject.geometry.location,
+							stopover: false,
+						}]
+					}
+				
+					directionsService.route(finalDirectonRequest, function(finalDirectionsResult, status){
+						if (status==google.maps.DirectionsStatus.OK){
+							directionsDisplay.setDirections(finalDirectionsResult);
+						}				
+					});
 				}				
 			});		
 		}
@@ -135,7 +136,7 @@
 			
 			for(var routeIter=0; routeIter<directionsResult.routes.length; routeIter++){
 				for (var legIter=0; legIter<directionsResult.routes[routeIter].legs.length; legIter++){
-					searchCoord=directionsResult.routes[routeIter].legs[legIter].start_location; 	//Need to be improved by embedded it in for loop
+					searchCoord=directionsResult.routes[routeIter].legs[legIter].start_location; 
 					var placesSearchRequest = {
 						location: searchCoord,
 						types: [establishmentType],
@@ -143,8 +144,8 @@
 					  };			
 					searchNearestEstablishment(placesSearchRequest);
 					  
-					for (var stepIter=0; stepIter<directionsResult.routes[routeIter].legs[legIter].length; stepIter++){
-						searchCoord=directionsResult.routes[routeIter].legs[legIter].step[stepIter].end_location;
+					for (var stepIter=0; stepIter<directionsResult.routes[routeIter].legs[legIter].steps.length; stepIter++){
+						searchCoord=directionsResult.routes[routeIter].legs[legIter].steps[stepIter].end_location;
 						var placesSearchRequest = {
 							location: searchCoord,
 							types: [establishmentType],
