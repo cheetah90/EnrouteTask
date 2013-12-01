@@ -48,15 +48,22 @@
     	var directionsDisplay;
 		var directionsService = new google.maps.DirectionsService(); 
 		var map;  
-		var tp_nearestEstablishmentObject = new Object();
-		var nearestEstablishmentObject = new Object();
-		var	detourTime=9999;
 		var start;
 		var dest;
 		var placesService;
 		var marker;
 		var placeInfoWindow;
+		var establishmentType;
+		var placesSearchRequest;
 		
+		var stepIter;
+		var routeIter;
+		var legIter;
+		var tp_nearestEstablishmentObject;
+		var nearestEstablishmentObject;
+		var	detourTime;
+		var exitIter;
+	
 		
 		function initialize() {
 			directionsDisplay = new google.maps.DirectionsRenderer();
@@ -71,6 +78,16 @@
 			directionsDisplay.setPanel(document.getElementById('directions-panel'));
 			placesService = new google.maps.places.PlacesService(map);
 			placeInfoWindow = new google.maps.InfoWindow();		
+			
+			//reset the global parameters
+			exitIter=0;
+			stepIter=0;
+			routeIter=0;
+			legIter=0;
+			detourTime=9999;
+			tp_nearestEstablishmentObject= new Object();
+			nearestEstablishmentObject= new Object();
+			
 	 	}
 		
 		function calcRoute(){
@@ -93,26 +110,26 @@
 			directionsService.route(firstdirectonRequest, function(directionsResult, status){
 				if (status==google.maps.DirectionsStatus.OK){
 					IterateWayPoint(directionsResult);
-					
-					createMarker(nearestEstablishmentObject);
-			
-					var finalDirectonRequest={
-						origin: start,
-						destination: dest,
-						travelMode: google.maps.TravelMode.DRIVING,
-						unitSystem: google.maps.UnitSystem.METRIC,
-						waypoints: [
-						{
-							location: nearestEstablishmentObject.geometry.location,
-							stopover: false,
-						}]
-					}
-				
-					directionsService.route(finalDirectonRequest, function(finalDirectionsResult, status){
-						if (status==google.maps.DirectionsStatus.OK){
-							directionsDisplay.setDirections(finalDirectionsResult);
-						}				
-					});
+				}				
+			});		
+		}
+		
+		function finalDirectionsServiceandRender(){
+			var finalDirectonRequest={
+				origin: start,
+				destination: dest,
+				travelMode: google.maps.TravelMode.DRIVING,
+				unitSystem: google.maps.UnitSystem.METRIC,
+				waypoints: [
+				{
+					location: nearestEstablishmentObject.geometry.location,
+					stopover: false,
+				}]
+			}
+		
+			directionsService.route(finalDirectonRequest, function(finalDirectionsResult, status){
+				if (status==google.maps.DirectionsStatus.OK){
+					directionsDisplay.setDirections(finalDirectionsResult);
 				}				
 			});		
 		}
@@ -131,36 +148,23 @@
 		
 		
 		function IterateWayPoint(directionsResult){
-			var establishmentType= document.getElementById("select_enroutetask").value;
+			establishmentType= document.getElementById("select_enroutetask").value;
 			var searchCoord;
 			
-			for(var routeIter=0; routeIter<directionsResult.routes.length; routeIter++){
-				for (var legIter=0; legIter<directionsResult.routes[routeIter].legs.length; legIter++){
-					searchCoord=directionsResult.routes[routeIter].legs[legIter].start_location; 
-					var placesSearchRequest = {
-						location: searchCoord,
-						types: [establishmentType],
-						rankBy: google.maps.places.RankBy.DISTANCE,
-					  };			
-					searchNearestEstablishment(placesSearchRequest);
-					  
-					for (var stepIter=0; stepIter<directionsResult.routes[routeIter].legs[legIter].steps.length; stepIter++){
-						searchCoord=directionsResult.routes[routeIter].legs[legIter].steps[stepIter].end_location;
-						var placesSearchRequest = {
-							location: searchCoord,
-							types: [establishmentType],
-							rankBy: google.maps.places.RankBy.DISTANCE,
-						};			
-						searchNearestEstablishment(placesSearchRequest);
-						}					
-					}
-				}		
+			searchCoord=directionsResult.routes[routeIter].legs[legIter].start_location; 
+			placesSearchRequest = {
+				location: searchCoord,
+				types: [establishmentType],
+				rankBy: google.maps.places.RankBy.DISTANCE,
+			};			
+			searchNearestEstablishment(placesSearchRequest,directionsResult);
+			
 		}
 		
-		function searchNearestEstablishment(placesSearchRequest){
+		function searchNearestEstablishment(placesSearchRequest,directionsResult){
 			placesService.nearbySearch(placesSearchRequest, function(placesResults, status){
 				if (status == google.maps.places.PlacesServiceStatus.OK)
-				{
+				{	
 					updatePlaceResultObject(tp_nearestEstablishmentObject,placesResults[0]);
 					var compareDirectonRequest=
 					{
@@ -169,21 +173,54 @@
 						travelMode: google.maps.TravelMode.DRIVING,
 						unitSystem: google.maps.UnitSystem.METRIC,
 					}
-					
+									
 					directionsService.route(compareDirectonRequest, function(compareDirectionsResult, status)
 					{
 						if (status==google.maps.DirectionsStatus.OK)
 						{
+							
 							if(compareDirectionsResult.routes[0].legs[0].duration.value<detourTime)
 							{
 								detourTime=compareDirectionsResult.routes[0].legs[0].duration.value;
 								updatePlaceResultObject(nearestEstablishmentObject,tp_nearestEstablishmentObject);
 							}
+							
+							exitIter++;
+							if(exitIter>=directionsResult.routes[routeIter].legs[legIter].steps[stepIter].lat_lngs.length)
+							{
+								stepIter++;		
+								exitIter=0;					
+								if(stepIter>=directionsResult.routes[routeIter].legs[legIter].steps.length)
+								{
+									legIter++;
+									stepIter=0;
+									if(legIter>=directionsResult.routes[routeIter].legs.length)
+									{
+										routeIter++;
+										legIter=0;
+									}
+								}	
+							}
+							
+							if(routeIter>=directionsResult.routes.length)
+							{
+								createMarker(nearestEstablishmentObject);
+								finalDirectionsServiceandRender();
+							}
+							else
+							{
+								searchCoord=directionsResult.routes[routeIter].legs[legIter].steps[stepIter].lat_lngs[exitIter];
+								placesSearchRequest = {
+									location: searchCoord,
+									types: [establishmentType],
+									rankBy: google.maps.places.RankBy.DISTANCE,
+								};								
+								searchNearestEstablishment(placesSearchRequest,directionsResult);	
+							}																																					
 						}
-					});
-					
+					});		
 				}
-			});
+			});				
 		};
 		
 		function updatePlaceResultObject(tobeupdated,update){
