@@ -1,5 +1,4 @@
 // JavaScript Document
-<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBj-LI45_3msjM7hqaAUl1hEj0J8fgidw&libraries=places&sensor=true"></script>
 //Define the Global variables
 var directionsDisplay;
 var directionsService = new google.maps.DirectionsService(); 
@@ -134,7 +133,8 @@ function searchNearestEstablishment(placesSearchRequest,directionsResult){
 						updatePlaceResultObject(nearestEstablishmentObject,tp_nearestEstablishmentObject);
 					}
 					
-					//Since we are not using for-loop, so we have to do the i++ job ourselves					
+					//Since we are not using for-loop, so we have to do the i++ job ourselves
+					stepIter++;					
 					if(stepIter>=directionsResult.routes[routeIter].legs[legIter].steps.length)
 					{
 						legIter++;
@@ -146,7 +146,6 @@ function searchNearestEstablishment(placesSearchRequest,directionsResult){
 						}
 					}	
 					
-					
 					//If we finish place search at every turn, create a marker at this recorded nearest establishment and do the final routing.
 					if(routeIter>=directionsResult.routes.length)
 					{
@@ -155,7 +154,7 @@ function searchNearestEstablishment(placesSearchRequest,directionsResult){
 					}
 					else	//if we have not finish places search at every turn, use next turn in the original route for nearest establishment search
 					{
-						searchCoord=directionsResult.routes[routeIter].legs[legIter].steps[stepIter].location;
+						searchCoord=directionsResult.routes[routeIter].legs[legIter].steps[stepIter].end_location;
 						placesSearchRequest = {
 							location: searchCoord,
 							types: [establishmentType],
@@ -212,5 +211,4 @@ function createMarker(place) {
 	placeInfoWindow.setContent(place.name);
 	placeInfoWindow.open(map, this);
   });
-}
-
+}  
