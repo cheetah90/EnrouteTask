@@ -52,7 +52,6 @@
 	var start;
 	var dest;
 	var placesService;
-	var marker;
 	var placeInfoWindow;
 	var establishmentType;
 	var placesSearchRequest;
@@ -64,9 +63,10 @@
 	var tp_nearestEstablishmentObject;
 	var nearestEstablishmentObject;
 	var	detourTime;
+	var markersArray=[]
 	
 	function initialize() {
-		directionsDisplay = new google.maps.DirectionsRenderer();
+		directionsDisplay = new google.maps.DirectionsRenderer({suppressMarkers:true});
 		var mapOptions = {
 		  center: new google.maps.LatLng(45, -93),
 		  zoom: 13,
@@ -89,11 +89,10 @@
 	//The Main function of Route Calculation, called when user click "Submit"
 	function calcRoute(){
 		//If the marker on map is already created, delete is
-		if(marker!=null)
-		{
-			marker.setMap(null);
-			marker=null;
+		for (i = 0; i < markersArray.length; i++) {
+		  markersArray[i].setMap(null);
 		}
+		markersArray=[];
 		
 		//reset the global parameters
 		stepIter=0;	
@@ -195,7 +194,6 @@
 						//If we finish place search at every turn, create a marker at this recorded nearest establishment and do the final routing.
 						if(routeIter>=directionsResult.routes.length)
 						{
-							createMarker(nearestEstablishmentObject);
 							finalDirectionsServiceandRender();
 						}
 						else	//if we have not finish places search at every turn, use next turn in the original route for nearest establishment search
@@ -228,7 +226,7 @@
 	
 	//This is the final Direction Service, which use the original start location and original end location from user input, and the nearest establishment which has the minimum detour time as waypoint.
 	function finalDirectionsServiceandRender(){
-		var finalDirectonRequest={
+		var finalDirectionRequest={
 			origin: start,
 			destination: dest,
 			travelMode: google.maps.TravelMode.DRIVING,
@@ -239,23 +237,51 @@
 			}]
 		}
 	
-		directionsService.route(finalDirectonRequest, function(finalDirectionsResult, status){
+		directionsService.route(finalDirectionRequest, function(finalDirectionsResult, status){
 			if (status==google.maps.DirectionsStatus.OK){
 				directionsDisplay.setDirections(finalDirectionsResult);
+				createMarkers(nearestEstablishmentObject,finalDirectionsResult);
 			}				
 		});		
 	}
 	
 	//Create Marker for the nearest establishment with minimum detour time.
-	function createMarker(place) {
-	  marker = new google.maps.Marker({
+	function createMarkers(place,finalDirection) {
+	  var placemarker = new google.maps.Marker({
 		map: map,
-		position: place.geometry.location
+		position: place.geometry.location,
+		icon: "https://mts.googleapis.com/vt/icon/name=icons/spotlight/spotlight-waypoint-a.png&text=B&psize=16&font=fonts/Roboto-Regular.ttf&color=ff333333&ax=44&ay=48&scale=1",
 	  });
+	  markersArray.push(placemarker);
 	
-	  google.maps.event.addListener(marker, 'click', function() {
-		placeInfoWindow.setContent(place.name);
+	  google.maps.event.addListener(placemarker, 'click', function() {
+		placeInfoWindow.setContent("<p><b>"+place.name+"</b></p>"+place.vicinity);
 		placeInfoWindow.open(map, this);
+	  });
+	  
+	  var startmarker = new google.maps.Marker({
+		map: map,
+		position: finalDirection.routes[0].legs[0].start_location,
+		icon:"https://mts.googleapis.com/vt/icon/name=icons/spotlight/spotlight-waypoint-b.png&text=A&psize=16&font=fonts/Roboto-Regular.ttf&color=ff333333&ax=44&ay=48&scale=1"
+	  });
+	  markersArray.push(startmarker);
+	
+	  google.maps.event.addListener(startmarker, 'click', function() {
+		placeInfoWindow.setContent(finalDirection.routes[0].legs[0].start_address);
+		placeInfoWindow.open(map, this);
+	  });
+	  
+	  var endmarker = new google.maps.Marker({
+		map: map,
+		position: finalDirection.routes[0].legs[1].end_location,
+		icon:"https://mts.googleapis.com/vt/icon/name=icons/spotlight/spotlight-waypoint-b.png&text=C&psize=16&font=fonts/Roboto-Regular.ttf&color=ff333333&ax=44&ay=48&scale=1",
+	  });
+	  markersArray.push(endmarker);
+	
+	  google.maps.event.addListener(endmarker, 'click', function() {
+		placeInfoWindow.setContent(finalDirection.routes[0].legs[1].end_address);
+		placeInfoWindow.open(map, this);
+		
 	  });
 	}  
 	
@@ -271,6 +297,11 @@
         	<option value="grocery_or_supermarket">Grocery</option>
       		<option value="restaurant">Restaurant</option>
       		<option value="cafe">Coffee</option>
+            <option value="gas_station">Gas Station</option>
+            <option value="library">Library</option>
+            <option value="pharmacy">Pharmacy</option>
+            <option value="bank">Bank</option>
+            
 		</select>
         <b>Enroute</b>
         <input type="button" value="Submit" onClick="calcRoute();">
