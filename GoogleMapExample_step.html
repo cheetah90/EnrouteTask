@@ -20,11 +20,26 @@
       }
 	  
 	  #directions-panel {
-        height: 100%;
+        position:absolute;
+		right:0px;
+		height: 90%;
+		top:10%;
         float: right;
         width: 350px;
         overflow: auto;
       }
+	  
+	  #total{
+		position: absolute;
+		right:0px;
+		height: 10%;
+		float: right;
+		width: 350px;
+		color: #2C2C2C;
+		font-family: Roboto,Arial,sans-serif;
+		font-weight: 300;  
+		text-align:center;
+	  }
 
       #map-canvas {
         margin-right: 350px;
@@ -240,6 +255,7 @@
 		directionsService.route(finalDirectionRequest, function(finalDirectionsResult, status){
 			if (status==google.maps.DirectionsStatus.OK){
 				directionsDisplay.setDirections(finalDirectionsResult);
+				computeRouteSummary(finalDirectionsResult);
 				createMarkers(nearestEstablishmentObject,finalDirectionsResult);
 			}				
 		});		
@@ -250,7 +266,7 @@
 	  var placemarker = new google.maps.Marker({
 		map: map,
 		position: place.geometry.location,
-		icon: "https://mts.googleapis.com/vt/icon/name=icons/spotlight/spotlight-waypoint-a.png&text=B&psize=16&font=fonts/Roboto-Regular.ttf&color=ff333333&ax=44&ay=48&scale=1",
+		icon: "https://mts.googleapis.com/vt/icon/name=icons/spotlight/spotlight-waypoint-a.png&text=W&psize=16&font=fonts/Roboto-Regular.ttf&color=ff333333&ax=44&ay=48&scale=1",
 	  });
 	  markersArray.push(placemarker);
 	
@@ -274,7 +290,7 @@
 	  var endmarker = new google.maps.Marker({
 		map: map,
 		position: finalDirection.routes[0].legs[1].end_location,
-		icon:"https://mts.googleapis.com/vt/icon/name=icons/spotlight/spotlight-waypoint-b.png&text=C&psize=16&font=fonts/Roboto-Regular.ttf&color=ff333333&ax=44&ay=48&scale=1",
+		icon:"https://mts.googleapis.com/vt/icon/name=icons/spotlight/spotlight-waypoint-b.png&text=B&psize=16&font=fonts/Roboto-Regular.ttf&color=ff333333&ax=44&ay=48&scale=1",
 	  });
 	  markersArray.push(endmarker);
 	
@@ -284,6 +300,46 @@
 		
 	  });
 	}  
+	
+	function computeRouteSummary(result) {
+		var totalDistance = 0;
+		var totalTime=0;
+		var myroute = result.routes[0];
+		var hour;
+		var minute;
+		var second;
+		var timeText
+		
+		for (var i = 0; i < myroute.legs.length; i++) {
+			totalDistance += myroute.legs[i].distance.value;
+			totalTime+= myroute.legs[i].duration.value;
+		}
+		totalDistance = totalDistance / 1000.0;
+		totalDistance = totalDistance.toFixed(1);
+		
+		if(totalTime>3600){
+			hour=totalTime/3600;
+			hour=Math.floor(hour);
+			totalTime=totalTime-hour*3600;
+		}
+		if(totalTime>60){
+			minute=totalTime/60;
+			minute=Math.floor(minute);
+			second=totalTime-60*minute;
+		}
+		
+		if(second>0){
+			timeText=second+' sec';
+			if(minute>0){
+				timeText=minute+' min '+timeText;
+				if(hour>0){
+					timeText=hour+"hr "+timeText	
+				}	
+			}				
+		}
+		
+		document.getElementById('total').innerHTML = 'Trip Total:  '+ totalDistance + ' km - ' +timeText;
+	}
 	
     
     </script>    
@@ -305,8 +361,9 @@
 		</select>
         <b>Enroute</b>
         <input type="button" value="Submit" onClick="calcRoute();">
-    </div>
+    </div>	
+    <div id = "total"></div>
     <div id="directions-panel"></div>  
-  	<div id = "map-canvas"/>	
-  </body>  
+  	<div id = "map-canvas"/>
+</body>  
 </html>
